@@ -1,13 +1,17 @@
-import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
 import ConcertoEditor from './pages/ctoEditor';
+import FileTextExtractor from './pages/upload';
+
 function App() {
-
-
   return (
-    <>
-      <ConcertoEditor />
-    </>
-  )
+    <Router>
+      <Routes>
+        <Route path="/" element={<ConcertoEditor />} />
+        <Route path="/upload" element={<FileTextExtractor />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
