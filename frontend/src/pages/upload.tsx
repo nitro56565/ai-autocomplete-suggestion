@@ -1,20 +1,21 @@
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import mammoth from "mammoth";
 
 // Set the PDF.js worker source
-GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs`;
+GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
 
 function FileTextExtractor() {
-  const [file, setFile] = useState(null);
-  const [text, setText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [text, setText] = useState<string>("");
 
   // Handle file selection
-  const handleFileUpload = (event) => {
-    const uploadedFile = event.target.files[0];
+  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = event.target.files?.[0] || null;
     if (uploadedFile) {
-      const fileType = uploadedFile.name.split(".").pop().toLowerCase();
-      if (["pdf", "docx", "txt"].includes(fileType)) {
+      const fileType = uploadedFile.name.split(".").pop()?.toLowerCase();
+      if (fileType && ["pdf", "docx", "txt"].includes(fileType)) {
         setFile(uploadedFile);
         setText(""); // Clear previous text on new file upload
       } else {
@@ -31,55 +32,74 @@ function FileTextExtractor() {
       return;
     }
 
-    const fileType = file.name.split(".").pop().toLowerCase();
+    const fileType = file.name.split(".").pop()?.toLowerCase();
 
-    if (fileType === "pdf") {
-      extractFromPdf(file);
-    } else if (fileType === "docx") {
-      extractFromDocx(file);
-    } else if (fileType === "txt") {
-      extractFromTxt(file);
+    switch (fileType) {
+      case "pdf":
+        await extractFromPdf(file);
+        break;
+      case "docx":
+        await extractFromDocx(file);
+        break;
+      case "txt":
+        extractFromTxt(file);
+        break;
+      default:
+        alert("Unsupported file type.");
     }
   };
 
   // Extract text from PDF files
-  const extractFromPdf = async (file) => {
+  const extractFromPdf = async (file: Blob) => {
     const reader = new FileReader();
     reader.onload = async () => {
-      const typedArray = new Uint8Array(reader.result);
-      const pdf = await getDocument(typedArray).promise;
-      let extractedText = "";
+      const typedArray = new Uint8Array(reader.result as ArrayBuffer);
+      try {
+        const pdf = await getDocument(typedArray).promise;
+        let extractedText = "";
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(" ");
-        extractedText += `Page ${i}:\n${pageText}\n\n`;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => ("str" in item ? item.str : ""))
+            .join(" ");
+          extractedText += `Page ${i}:
+${pageText}\n\n`;
+        }
+
+        setText(extractedText);
+      } catch (error) {
+        console.error("Failed to extract PDF content", error);
+        alert("Error extracting text from PDF.");
       }
-
-      setText(extractedText);
     };
 
     reader.readAsArrayBuffer(file);
   };
 
   // Extract text from DOCX files using Mammoth
-  const extractFromDocx = (file) => {
+  const extractFromDocx = (file: Blob) => {
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const arrayBuffer = event.target.result;
-      const { value } = await mammoth.extractRawText({ arrayBuffer });
-      setText(value.trim());
+      try {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const { value } = await mammoth.extractRawText({ arrayBuffer });
+        setText(value.trim());
+      } catch (error) {
+        console.error("Failed to extract DOCX content", error);
+        alert("Error extracting text from DOCX.");
+      }
     };
 
     reader.readAsArrayBuffer(file);
   };
 
   // Extract text from TXT files
-  const extractFromTxt = (file) => {
+  const extractFromTxt = (file: Blob) => {
     const reader = new FileReader();
     reader.onload = (event) => {
-      setText(event.target.result);
+      setText(event.target?.result as string);
     };
     reader.readAsText(file);
   };
