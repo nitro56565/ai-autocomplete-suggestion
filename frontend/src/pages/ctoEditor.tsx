@@ -108,6 +108,7 @@ const handleEditorWillMount = (monacoInstance: typeof monaco) => {
 
 export default function ConcertoEditor() {
   const monacoInstance = useMonaco();
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
   const options: monaco.editor.IStandaloneEditorConstructionOptions = {
     minimap: { enabled: false },
@@ -121,7 +122,7 @@ export default function ConcertoEditor() {
   const handleMount = (editor: StandaloneCodeEditor, monaco: Monaco) => {
     // Register Monacopilot with Node.js backend endpoint
     completionRef.current = registerCompletion(monaco, editor, {
-      endpoint: "http://localhost:3000/api/code-completion",
+      endpoint: `${BACKEND_URL}/api/code-completion`,
       language: "concerto",
     });
   };
